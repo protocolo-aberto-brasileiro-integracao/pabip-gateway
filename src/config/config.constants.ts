@@ -1,0 +1,237 @@
+export type ConfigFieldType = 'string' | 'number' | 'boolean' | 'json';
+
+export interface ConfigFieldDefinition {
+  key: string;
+  section: string;
+  envVar: string;
+  type: ConfigFieldType;
+  bootOnly: boolean;
+  sensitive?: boolean;
+  default?: unknown;
+}
+
+export const GATEWAY_CONFIG_RESEED_ENV_VAR = 'GATEWAY_CONFIG_RESEED';
+
+export const CONFIG_CHANGED_CHANNEL = 'config_changed';
+
+export const CONFIG_POLL_INTERVAL_MS = 5_000;
+
+export const CONFIG_FIELDS: ConfigFieldDefinition[] = [
+  {
+    key: 'database.url',
+    section: 'database',
+    envVar: 'DATABASE_URL',
+    type: 'string',
+    bootOnly: true,
+    sensitive: true,
+  },
+  {
+    key: 'gateway.devMode',
+    section: 'gateway',
+    envVar: 'GATEWAY_DEV_MODE',
+    type: 'boolean',
+    bootOnly: true,
+    default: false,
+  },
+  {
+    key: 'gateway.entePublicoName',
+    section: 'gateway',
+    envVar: 'GATEWAY_ENTE_PUBLICO_NAME',
+    type: 'string',
+    bootOnly: true,
+  },
+  {
+    key: 'gateway.tls.certPath',
+    section: 'gateway',
+    envVar: 'GATEWAY_TLS_CERT_PATH',
+    type: 'string',
+    bootOnly: true,
+    default: '',
+  },
+  {
+    key: 'gateway.tls.keyPath',
+    section: 'gateway',
+    envVar: 'GATEWAY_TLS_KEY_PATH',
+    type: 'string',
+    bootOnly: true,
+    default: '',
+  },
+  {
+    key: 'gateway.publicPort',
+    section: 'gateway',
+    envVar: 'GATEWAY_PUBLIC_PORT',
+    type: 'number',
+    bootOnly: true,
+    default: 8080,
+  },
+  {
+    key: 'gateway.adminPort',
+    section: 'gateway',
+    envVar: 'GATEWAY_ADMIN_PORT',
+    type: 'number',
+    bootOnly: true,
+    default: 8081,
+  },
+  {
+    key: 'gateway.trustedProxyCidrs',
+    section: 'gateway',
+    envVar: 'GATEWAY_TRUSTED_PROXY_CIDRS',
+    type: 'string',
+    bootOnly: true,
+    default: '',
+  },
+  {
+    key: 'delivery.maxConcurrentPerPeer',
+    section: 'delivery',
+    envVar: 'DELIVERY_MAX_CONCURRENT_PER_PEER',
+    type: 'number',
+    bootOnly: false,
+    default: 20,
+  },
+  {
+    key: 'delivery.maxAttempts',
+    section: 'delivery',
+    envVar: 'DELIVERY_MAX_ATTEMPTS',
+    type: 'number',
+    bootOnly: false,
+    default: 3,
+  },
+  {
+    key: 'delivery.windowSeconds',
+    section: 'delivery',
+    envVar: 'DELIVERY_WINDOW_SECONDS',
+    type: 'number',
+    bootOnly: false,
+    default: 60,
+  },
+  {
+    key: 'shutdown.gracePeriodSeconds',
+    section: 'shutdown',
+    envVar: 'SHUTDOWN_GRACE_PERIOD_SECONDS',
+    type: 'number',
+    bootOnly: false,
+    default: 90,
+  },
+  {
+    key: 'output.type',
+    section: 'output',
+    envVar: 'OUTPUT_TYPE',
+    type: 'string',
+    bootOnly: false,
+    default: 'callback',
+  },
+  {
+    key: 'output.callback.url',
+    section: 'output',
+    envVar: 'OUTPUT_CALLBACK_URL',
+    type: 'string',
+    bootOnly: false,
+    default: '',
+  },
+  {
+    key: 'output.callback.headers',
+    section: 'output',
+    envVar: 'OUTPUT_CALLBACK_HEADERS',
+    type: 'json',
+    bootOnly: false,
+    default: {},
+  },
+  {
+    key: 'output.queue.routingKeyTemplate',
+    section: 'output',
+    envVar: 'OUTPUT_QUEUE_ROUTING_KEY_TEMPLATE',
+    type: 'string',
+    bootOnly: false,
+    default: 'pabip.events.{peerId}.{batchType}',
+  },
+  {
+    key: 'output.queue.brokerUrl',
+    section: 'output',
+    envVar: 'OUTPUT_QUEUE_BROKER_URL',
+    type: 'string',
+    bootOnly: true,
+    sensitive: true,
+    default: '',
+  },
+  {
+    key: 'output.db.connectionString',
+    section: 'output',
+    envVar: 'OUTPUT_DB_CONNECTION_STRING',
+    type: 'string',
+    bootOnly: true,
+    sensitive: true,
+    default: '',
+  },
+  {
+    key: 'logging.level',
+    section: 'logging',
+    envVar: 'LOG_LEVEL',
+    type: 'string',
+    bootOnly: false,
+    default: 'info',
+  },
+  {
+    key: 'circuitBreaker.errorThreshold',
+    section: 'circuitBreaker',
+    envVar: 'CIRCUIT_BREAKER_ERROR_THRESHOLD',
+    type: 'number',
+    bootOnly: false,
+    default: 0.5,
+  },
+  {
+    key: 'circuitBreaker.windowSeconds',
+    section: 'circuitBreaker',
+    envVar: 'CIRCUIT_BREAKER_WINDOW_SECONDS',
+    type: 'number',
+    bootOnly: false,
+    default: 30,
+  },
+  {
+    key: 'retry.maxAttempts',
+    section: 'retry',
+    envVar: 'RETRY_MAX_ATTEMPTS',
+    type: 'number',
+    bootOnly: false,
+    default: 5,
+  },
+  {
+    key: 'retry.baseDelayMs',
+    section: 'retry',
+    envVar: 'RETRY_BASE_DELAY_MS',
+    type: 'number',
+    bootOnly: false,
+    default: 500,
+  },
+  {
+    key: 'retry.jitterPct',
+    section: 'retry',
+    envVar: 'RETRY_JITTER_PCT',
+    type: 'number',
+    bootOnly: false,
+    default: 20,
+  },
+  {
+    key: 'audit.sink',
+    section: 'audit',
+    envVar: 'AUDIT_SINK',
+    type: 'string',
+    bootOnly: false,
+    default: 'stdout',
+  },
+  {
+    key: 'audit.retentionDays',
+    section: 'audit',
+    envVar: 'AUDIT_RETENTION_DAYS',
+    type: 'number',
+    bootOnly: false,
+    default: 180,
+  },
+  {
+    key: 'peerOnboarding.onboardingValidationTimeoutMs',
+    section: 'peerOnboarding',
+    envVar: 'PEER_ONBOARDING_VALIDATION_TIMEOUT_MS',
+    type: 'number',
+    bootOnly: false,
+    default: 5000,
+  },
+];
