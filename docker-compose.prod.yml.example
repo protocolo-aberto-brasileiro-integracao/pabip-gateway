@@ -1,0 +1,129 @@
+# Reference production deploy — copy to `docker-compose.prod.yml`, fill in
+# the placeholders, and treat it as a starting point, not a finished
+# manifest. This is deliberately *not* `docker-compose.dev.yml` scaled up:
+# dev uses a throwaway local Postgres and a single instance behind no proxy;
+# this shows the three things that change for a real deployment:
+#
+#   1. Postgres is external, already provisioned, already backed up — this
+#      file only ever points at it via `DATABASE_URL`, it never runs a
+#      Postgres container of its own (see OPERATIONS.md's infra
+#      requirements and backup/restore runbook).
+#   2. TLS terminates in a reverse proxy in front of the public webhook
+#      port, never inside the gateway process itself — the admin-api port
+#      is never reverse-proxied or exposed to the host at all, it stays
+#      reachable only on the private network these containers share.
+#   3. Multiple app replicas, and exactly one migration job that runs to
+#      completion *before* any replica starts — never a `migrate deploy`
+#      embedded in each replica's own boot.
+#
+# Usage:
+#   cp docker-compose.prod.yml.example docker-compose.prod.yml
+#   cp .env.example .env.prod   # fill in every value, see OPERATIONS.md
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+
+services:
+  # Runs `prisma migrate deploy` exactly once, then exits — for the multi-replica
+  # case: the same image as `gateway`, just invoked with
+  # `migrate-only` instead of the default single-replica command. Every
+  # `gateway` replica below only starts once this exits 0
+  # (`service_completed_successfully`), so no replica's own boot ever races
+  # this migration (`boot-guard.ts` refuses to boot on a schema mismatch
+  # instead of trying to fix it — see `docker-entrypoint.sh`).
+  migrate:
+    image: ${GATEWAY_IMAGE:-pabip-gateway}:${GATEWAY_IMAGE_TAG:-latest}
+    command: ['migrate-only']
+    restart: 'no'
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL_FILE: ${DATABASE_URL_FILE:-}
+    networks:
+      - internal
+
+  gateway:
+    image: ${GATEWAY_IMAGE:-pabip-gateway}:${GATEWAY_IMAGE_TAG:-latest}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    # Plain `docker compose up` (no Swarm) still honors `deploy.replicas`
+    # since Compose V2 — three here as a starting point, not a sizing
+    # recommendation; see OPERATIONS.md for how `delivery.maxConcurrentPerPeer`
+    # and rate-limiter state interact with replica count.
+    deploy:
+      replicas: 3
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_URL_FILE: ${DATABASE_URL_FILE:-}
+      GATEWAY_ENTE_PUBLICO_NAME: ${GATEWAY_ENTE_PUBLICO_NAME}
+      # Seeds the first admin token on a genuinely first boot only — every
+      # boot after that, the token(s) already in the database are what
+      # authenticates; this can (and should) be unset again once you've
+      # confirmed at least one token exists (OPERATIONS.md's first-boot
+      # checklist and AdminToken rotation procedure).
+      GATEWAY_ADMIN_TOKENS: ${GATEWAY_ADMIN_TOKENS:-}
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Set only if this platform's own termination grace period is a fixed,
+      # known value shorter than `shutdown.gracePeriodSeconds` — see
+      # OPERATIONS.md's env var table and `boot-guard.ts`'s
+      # `assertShutdownGracePeriodAllowed`.
+      ORCH_TERMINATION_GRACE_PERIOD_SECONDS: ${ORCH_TERMINATION_GRACE_PERIOD_SECONDS:-}
+    # Give the graceful-shutdown drain (`shutdown.gracePeriodSeconds`,
+    # default 90s) room to finish before Compose escalates to SIGKILL on
+    # `docker compose stop`/a replace — keep this at or above whatever
+    # `shutdown.gracePeriodSeconds` is configured to on the running instance.
+    stop_grace_period: 120s
+    expose:
+      # `gateway.publicPort` only — `reverse-proxy` is the only thing that
+      # ever reaches this. `gateway.adminPort` (8081) is deliberately not
+      # listed here at all: nothing outside this compose project's own
+      # `internal` network should ever be able to open a TCP connection to
+      # it, and `pabip-gatewayctl`/`pabip-admin` are expected to run from a
+      # host that already has a route into that private network (a bastion,
+      # a VPN client, the operator's own machine on the VPC) — see
+      # `OPERATIONS.md`'s network model.
+      - '8080'
+    networks:
+      - internal
+
+  # Reverse proxy — Caddy for its zero-config automatic HTTPS (an ACME
+  # account email + the public hostname in `Caddyfile` is the whole TLS
+  # setup); swap for nginx/Traefik/whatever the operator's own infra
+  # standard already is; the reverse-proxy layer is a placeholder, not a
+  # prescribed technology — this repo doesn't mandate a hosting stack.
+  reverse-proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '443:443'
+      - '80:80' # ACME HTTP-01 challenge + plain-HTTP redirect to 443
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - gateway
+    networks:
+      - internal
+
+networks:
+  # A single project-local bridge network is enough isolation here: nothing
+  # outside this compose project can reach `gateway`/`migrate` directly
+  # regardless (Docker's own bridge network already doesn't expose
+  # unpublished ports to the host or the internet) — `reverse-proxy` is the
+  # only service in this file that publishes anything.
+  internal:
+    driver: bridge
+
+volumes:
+  caddy-data:
+  caddy-config:
+
+# --- Caddyfile (place next to this compose file) ------------------------
+# webhook.your-domain.example {
+#   reverse_proxy gateway:8080
+# }
+# --------------------------------------------------------------------------
