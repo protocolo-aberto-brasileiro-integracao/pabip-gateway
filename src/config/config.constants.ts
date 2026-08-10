@@ -232,6 +232,6 @@ export const CONFIG_FIELDS: ConfigFieldDefinition[] = [
     envVar: 'PEER_ONBOARDING_VALIDATION_TIMEOUT_MS',
     type: 'number',
     bootOnly: false,
-    default: 5000,
+    default: 20000,
   },
 ];
