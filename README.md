@@ -59,9 +59,6 @@ listeners com exposição radicalmente diferente:
   fora da rede privada do operador: cadastro de parceiros, tokens,
   configuração, `/healthz`, `/readyz`, `/metrics`.
 
-Veja [`OPERATIONS.md`](./OPERATIONS.md) para o modelo de rede completo,
-requisitos de infraestrutura e o passo a passo de deploy.
-
 ## Começando
 
 ```
@@ -74,18 +71,12 @@ npx prisma migrate deploy
 npm run start:dev
 ```
 
-Veja [`CONTRIBUTING.md`](./CONTRIBUTING.md) para o guia completo de
-desenvolvimento local (lint, build, testes unitários/integração/e2e) e
-[`OPERATIONS.md`](./OPERATIONS.md) para rodar uma instância real em
-produção.
-
-## Documentação
-
-| Documento | Para quem |
-|---|---|
-| [`CONTRIBUTING.md`](./CONTRIBUTING.md) | quem vai contribuir código a este repositório |
-| [`OPERATIONS.md`](./OPERATIONS.md) | quem vai operar uma instância em produção |
-| [`cli/README.md`](./cli/README.md) | quem vai usar o `pabip-gatewayctl` |
+```
+npm run lint && npm run lint:cli
+npm run build && npm run build:cli
+npm test && npm run test:cli
+npm run test:integration && npm run test:e2e   # precisam do Postgres acima
+```
 
 ## Status
 

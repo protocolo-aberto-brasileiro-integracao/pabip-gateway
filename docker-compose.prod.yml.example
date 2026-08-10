@@ -6,8 +6,7 @@
 #
 #   1. Postgres is external, already provisioned, already backed up — this
 #      file only ever points at it via `DATABASE_URL`, it never runs a
-#      Postgres container of its own (see OPERATIONS.md's infra
-#      requirements and backup/restore runbook).
+#      Postgres container of its own.
 #   2. TLS terminates in a reverse proxy in front of the public webhook
 #      port, never inside the gateway process itself — the admin-api port
 #      is never reverse-proxied or exposed to the host at all, it stays
@@ -18,7 +17,7 @@
 #
 # Usage:
 #   cp docker-compose.prod.yml.example docker-compose.prod.yml
-#   cp .env.example .env.prod   # fill in every value, see OPERATIONS.md
+#   cp .env.example .env.prod   # fill in every value
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 
 services:
@@ -46,8 +45,7 @@ services:
         condition: service_completed_successfully
     # Plain `docker compose up` (no Swarm) still honors `deploy.replicas`
     # since Compose V2 — three here as a starting point, not a sizing
-    # recommendation; see OPERATIONS.md for how `delivery.maxConcurrentPerPeer`
-    # and rate-limiter state interact with replica count.
+    # recommendation.
     deploy:
       replicas: 3
     restart: unless-stopped
@@ -61,15 +59,13 @@ services:
       # Seeds the first admin token on a genuinely first boot only — every
       # boot after that, the token(s) already in the database are what
       # authenticates; this can (and should) be unset again once you've
-      # confirmed at least one token exists (OPERATIONS.md's first-boot
-      # checklist and AdminToken rotation procedure).
+      # confirmed at least one token exists.
       GATEWAY_ADMIN_TOKENS: ${GATEWAY_ADMIN_TOKENS:-}
       NODE_ENV: production
       LOG_LEVEL: ${LOG_LEVEL:-info}
       # Set only if this platform's own termination grace period is a fixed,
       # known value shorter than `shutdown.gracePeriodSeconds` — see
-      # OPERATIONS.md's env var table and `boot-guard.ts`'s
-      # `assertShutdownGracePeriodAllowed`.
+      # `boot-guard.ts`'s `assertShutdownGracePeriodAllowed`.
       ORCH_TERMINATION_GRACE_PERIOD_SECONDS: ${ORCH_TERMINATION_GRACE_PERIOD_SECONDS:-}
     # Give the graceful-shutdown drain (`shutdown.gracePeriodSeconds`,
     # default 90s) room to finish before Compose escalates to SIGKILL on
@@ -83,8 +79,7 @@ services:
       # `internal` network should ever be able to open a TCP connection to
       # it, and `pabip-gatewayctl`/`pabip-admin` are expected to run from a
       # host that already has a route into that private network (a bastion,
-      # a VPN client, the operator's own machine on the VPC) — see
-      # `OPERATIONS.md`'s network model.
+      # a VPN client, the operator's own machine on the VPC).
       - '8080'
     networks:
       - internal

@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 #
 # Multi-stage build for `pabip-gateway` — this file, and only this file
-# plus `docker-compose.prod.yml.example`/`OPERATIONS.md`, is what ships in
-# this repo; building and publishing an official image from it is left to
-# whoever operates a given release channel, not automated here.
+# plus `docker-compose.prod.yml.example`, is what ships in this repo;
+# building and publishing an official image from it is left to whoever
+# operates a given release channel, not automated here.
 #
 # Debian slim over Alpine for the runtime stage: Prisma's migration engine
 # (bundled inside the `prisma` package, needed by `docker-entrypoint.sh` at
