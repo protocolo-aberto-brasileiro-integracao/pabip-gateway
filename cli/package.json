@@ -1,0 +1,35 @@
+{
+  "name": "pabip-gatewayctl",
+  "version": "0.1.0",
+  "description": "Headless command-line client for a pabip-gateway instance's admin-api.",
+  "license": "Apache-2.0",
+  "private": true,
+  "bin": {
+    "pabip-gatewayctl": "dist/main.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "prebuild": "rimraf dist *.tsbuildinfo",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "lint": "eslint \"src/**/*.ts\"",
+    "test": "jest",
+    "test:cov": "jest --coverage"
+  },
+  "dependencies": {
+    "commander": "^13.1.0"
+  },
+  "jest": {
+    "moduleFileExtensions": ["js", "json", "ts"],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": ["**/*.(t|j)s", "!main.ts"],
+    "coverageDirectory": "../coverage",
+    "testEnvironment": "node"
+  }
+}
