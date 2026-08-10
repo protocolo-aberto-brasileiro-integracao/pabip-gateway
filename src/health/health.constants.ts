@@ -1,0 +1,5 @@
+export const LIVENESS_HEARTBEAT_INTERVAL_MS = 1_000;
+export const LIVENESS_MAX_LAG_MS = 5_000;
+
+export const HEALTH_METRICS_MAX_PEER_LABELS = 50;
+export const HEALTH_METRICS_OVERFLOW_PEER_LABEL = '_overflow';

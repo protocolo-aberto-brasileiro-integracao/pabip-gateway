@@ -1,0 +1,5 @@
+export const OPERATION_LOG_RETENTION_DAYS = 30;
+
+export const OPERATION_LOG_PARTITION_LOOKAHEAD_DAYS = 3;
+
+export const MS_PER_DAY = 24 * 60 * 60 * 1000;
