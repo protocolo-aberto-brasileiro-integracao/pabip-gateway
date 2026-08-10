@@ -1,5 +1,10 @@
 import { AdminTokenService, type AdminTokenSummary } from './admin-token.service';
 import { hashSecret } from './crypto.util';
+import { Prisma } from '../generated/prisma/client';
+
+function knownRequestError(code: string): Prisma.PrismaClientKnownRequestError {
+  return new Prisma.PrismaClientKnownRequestError('simulated', { code, clientVersion: 'test' });
+}
 
 describe('AdminTokenService', () => {
   let create: jest.Mock;
@@ -126,6 +131,19 @@ describe('AdminTokenService', () => {
 
       await expect(service.seedAdminTokens([])).resolves.toBeUndefined();
       expect(upsert).not.toHaveBeenCalled();
+    });
+
+    it('tolerates a concurrent boot winning the same upsert (P2002)', async () => {
+      upsert.mockRejectedValue(knownRequestError('P2002'));
+      count.mockResolvedValue(1);
+
+      await expect(service.seedAdminTokens(['adm_a'])).resolves.toBeUndefined();
+    });
+
+    it('still rejects a genuine database error from the upsert', async () => {
+      upsert.mockRejectedValue(knownRequestError('P2024'));
+
+      await expect(service.seedAdminTokens(['adm_a'])).rejects.toThrow('simulated');
     });
   });
 });

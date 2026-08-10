@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { registerSecret } from '../common/logging/secret-redactor';
 import type { AdminTokenSeedWriter } from '../config/entity-seed.tokens';
@@ -59,20 +60,26 @@ export class AdminTokenService implements AdminTokenSeedWriter {
     for (const rawToken of tokens) {
       registerSecret(rawToken);
       const tokenHash = hashSecret(rawToken);
-      await this.prisma.adminToken.upsert({
-        where: { tokenHash },
-        create: { tokenHash, label: 'seed' },
-        update: {},
-      });
+      try {
+        await this.prisma.adminToken.upsert({
+          where: { tokenHash },
+          create: { tokenHash, label: 'seed' },
+          update: {},
+        });
+      } catch (error) {
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002')) {
+          throw error;
+        }
+      }
     }
 
     const total = await this.prisma.adminToken.count();
     if (total === 0) {
       throw new Error(
         'No admin token is configured (gateway.adminTokens is empty) and none exist in the ' +
-          'database yet — refusing to boot with an unprotected admin-api (fail-closed, design ' +
-          '§3/§6.4). Set gateway.adminTokens (config file) or GATEWAY_ADMIN_TOKENS (ENV, comma-' +
-          'separated) to at least one token before starting the gateway.',
+          'database yet — refusing to boot with an unprotected admin-api (fail-closed). Set ' +
+          'gateway.adminTokens (config file) or GATEWAY_ADMIN_TOKENS (ENV, comma-separated) to ' +
+          'at least one token before starting the gateway.',
       );
     }
 
