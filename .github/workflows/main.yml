@@ -1,0 +1,12 @@
+name: CI Pipeline
+
+on:
+  pull_request: {}
+  push:
+    branches:
+      - main
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml

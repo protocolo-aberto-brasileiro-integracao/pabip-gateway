@@ -1,0 +1,92 @@
+name: CI Pipeline
+
+on:
+  workflow_call: {}
+
+jobs:
+  lint-and-test:
+    name: lint-and-test
+    runs-on: ubuntu-latest
+    # Job-level DATABASE_URL only — every step that touches Postgres
+    # (migrate, integration, e2e) shares it, and unit/CLI tests just ignore
+    # it. GATEWAY_ENTE_PUBLICO_NAME is deliberately *not* here: some e2e
+    # specs boot the real AppModule without seeding it themselves (unlike
+    # admin-api.e2e-spec.ts's own beforeAll) and need it set, but
+    # config-cache.service.spec.ts's own "throws on invalid config" unit
+    # test relies on it being *absent* from the ambient environment —
+    # found by setting it job-wide and watching that unit test start
+    # passing for the wrong reason. Scoped to the "E2E tests" step only.
+    env:
+      DATABASE_URL: postgresql://gateway:gateway@localhost:5432/gateway?schema=public
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: gateway
+          POSTGRES_PASSWORD: gateway
+          POSTGRES_DB: gateway
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gateway -d gateway"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Matches the Dockerfile's own ARG NODE_IMAGE (node:20-bookworm-slim)
+          # so CI exercises the same Node major the production image ships.
+          node-version: '20'
+
+      # A single `npm ci` at the root installs both workspaces (the gateway
+      # app and `cli/`, declared via package.json's `workspaces: ["cli"]`).
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Lint CLI
+        run: npm run lint:cli
+
+      - name: Build
+        run: npm run build
+
+      - name: Build CLI
+        run: npm run build:cli
+
+      # test:integration/test:e2e boot the real AppModule against Postgres.
+      # Job runs directly on the runner (no job-level `container:`) so
+      # DATABASE_URL's `localhost` above resolves correctly — inside a
+      # container the service would only be reachable by service name.
+      - name: Migrate test database
+        run: npx prisma migrate deploy
+
+      - name: Unit tests
+        run: npm test
+
+      - name: CLI unit tests
+        run: npm run test:cli
+
+      - name: Integration tests
+        run: npm run test:integration
+
+      - name: E2E tests
+        run: npm run test:e2e
+        env:
+          GATEWAY_ENTE_PUBLICO_NAME: ci-e2e-test
+          # app.e2e-spec.ts and dual-listener.e2e-spec.ts both boot the real
+          # AppModule without seeding this themselves (unlike
+          # admin-api.e2e-spec.ts's own beforeAll, which overrides it to its
+          # own token anyway). Against a genuinely empty CI database, the
+          # fail-closed admin-api boot guard refuses to start without at
+          # least one token — passing locally depended on
+          # Jest's file-execution order happening to run admin-api's own
+          # seed first, which isn't guaranteed (and didn't hold on the real
+          # runner).
+          GATEWAY_ADMIN_TOKENS: adm_ci-e2e-seed-token
