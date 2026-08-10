@@ -1,4 +1,10 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { KeyIssuanceService } from '../auth/key-issuance.service';
@@ -12,6 +18,7 @@ import { CreatePeerDto } from './dto/create-peer.dto';
 import type { PeerResponseDto } from './dto/peer-response.dto';
 import { OnboardingService } from './onboarding.service';
 import { PeerCacheService, type CachedPeer } from './peer-cache.service';
+import { PeerUnreachableError } from './peer-onboarding.error';
 import { PEERS_CHANGED_CHANNEL } from './peers.constants';
 
 export interface PeerListResult {
@@ -39,11 +46,20 @@ export class PeersService implements PeerSeedWriter {
   ) {}
 
   async create(dto: CreatePeerDto): Promise<PeerResponseDto> {
-    const { capabilities, issuedApiKey, apiKeyHash } = await this.onboarding.onboard({
-      baseUrl: dto.baseUrl,
-      theirApiKey: dto.theirApiKey,
-      timeoutMs: this.configService.peerOnboarding.onboardingValidationTimeoutMs,
-    });
+    let onboarded;
+    try {
+      onboarded = await this.onboarding.onboard({
+        baseUrl: dto.baseUrl,
+        theirApiKey: dto.theirApiKey,
+        timeoutMs: this.configService.peerOnboarding.onboardingValidationTimeoutMs,
+      });
+    } catch (error) {
+      if (error instanceof PeerUnreachableError) {
+        throw new ServiceUnavailableException(error.message);
+      }
+      throw error;
+    }
+    const { capabilities, issuedApiKey, apiKeyHash } = onboarded;
 
     registerSecret(dto.theirApiKey);
     registerSecret(issuedApiKey);

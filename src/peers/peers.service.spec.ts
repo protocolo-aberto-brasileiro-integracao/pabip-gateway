@@ -1,5 +1,6 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
+import { PeerUnreachableError } from './peer-onboarding.error';
 import { PeersService } from './peers.service';
 
 function knownRequestError(code: string): Prisma.PrismaClientKnownRequestError {
@@ -118,6 +119,17 @@ describe('PeersService', () => {
     it('propagates onboarding failures without writing to the database', async () => {
       onboard.mockRejectedValue(new Error('unreachable'));
       await expect(service.create(dto as never)).rejects.toThrow('unreachable');
+      expect(create).not.toHaveBeenCalled();
+    });
+
+    it('translates a peer manifest validation failure into ServiceUnavailableException', async () => {
+      onboard.mockRejectedValue(
+        new PeerUnreachableError(
+          'Could not validate the peer\'s manifest at "https://acme.example/sensor-nodes": timed out',
+        ),
+      );
+      await expect(service.create(dto as never)).rejects.toThrow(ServiceUnavailableException);
+      await expect(service.create(dto as never)).rejects.toThrow(/timed out/);
       expect(create).not.toHaveBeenCalled();
     });
   });
