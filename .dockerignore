@@ -1,0 +1,23 @@
+node_modules
+cli/node_modules
+dist
+cli/dist
+coverage
+*.tsbuildinfo
+# Gitignored, but not build-context-ignored until now: the `build` stage's
+# `COPY . .` copies the host's working directory verbatim, which silently
+# overwrote the `deps` stage's freshly `prisma generate`d client with
+# whatever stale copy happened to sit on the builder's disk (e.g. from an
+# earlier local `npm run build` predating a schema change) — a build that
+# succeeds and ships a Prisma Client out of sync with the schema/source
+# it was actually built against, non-reproducibly depending on the
+# builder's local state. `prisma generate`'s own output, always, never a
+# leftover from the host.
+src/generated
+.git
+.env
+.env.*
+!.env.example
+*.log
+prisma/*.db
+prisma/*.db-journal

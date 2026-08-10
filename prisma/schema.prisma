@@ -1,0 +1,132 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model GatewayConfig {
+  key String @id
+
+  value Json
+
+  source ConfigSource
+
+  seededAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@map("gateway_config")
+}
+
+enum ConfigSource {
+  file
+  env
+  api
+  default
+
+  @@map("config_source")
+}
+
+model Peer {
+  id String @id @default(uuid())
+
+  name    String
+  baseUrl String
+
+  theirApiKey String
+
+  apiKeyHash String @unique
+
+  scopes String[]
+
+  ipAllowlist String[]
+
+  capabilities String[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@map("peers")
+}
+
+model AdminToken {
+  id String @id @default(cuid())
+
+  tokenHash String @unique
+
+  label String?
+
+  createdAt DateTime @default(now())
+
+  @@map("admin_tokens")
+}
+
+model ClientToken {
+  id String @id @default(cuid())
+
+  tokenHash String @unique
+
+  label String?
+
+  ipAllowlist String[]
+
+  createdAt DateTime @default(now())
+
+  @@map("client_tokens")
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  category AuditCategory
+
+  action String
+
+  peerId String?
+
+  detail String?
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+enum AuditCategory {
+  delivery
+  peer_store
+  access
+
+  @@map("audit_category")
+}
+
+model OperationLog {
+  id String @default(cuid())
+
+  operationType OperationType
+
+  peerId String?
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  @@id([id, createdAt])
+  @@index([operationType, createdAt])
+  @@map("operation_log")
+}
+
+enum OperationType {
+  analytics_batch_received
+  video_session_live_requested
+  video_session_history_requested
+
+  @@map("operation_type")
+}

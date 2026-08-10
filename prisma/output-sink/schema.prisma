@@ -1,0 +1,31 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../../src/generated/output-sink-prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model DeliveredAnalyticsEvent {
+  eventId String @id
+
+  eventTime    DateTime
+  sensorNodeId String
+  partnerName  String
+  latitude     Float
+  longitude    Float
+  evidenceUrl  String
+
+  batchId   String
+  batchType String
+
+  peerId String
+
+  data Json
+
+  receivedAt DateTime @default(now())
+
+  @@map("image_analytics_events")
+}
