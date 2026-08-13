@@ -81,6 +81,22 @@ describe('ConfigAdminController', () => {
       expect(write).not.toHaveBeenCalled();
     });
 
+    it('accepts output.queue.brokerUrl and output.db.connectionString as apiWritable', async () => {
+      const snapshot = await controller.update({
+        values: {
+          'output.queue.brokerUrl': 'amqp://user:pass@new-broker:5672',
+          'output.db.connectionString': 'postgresql://new-out',
+        },
+      });
+
+      expect(write).toHaveBeenCalledWith(
+        'output.queue.brokerUrl',
+        'amqp://user:pass@new-broker:5672',
+      );
+      expect(write).toHaveBeenCalledWith('output.db.connectionString', 'postgresql://new-out');
+      expect(snapshot.output.queue.brokerUrl).toBe('[REDACTED]');
+    });
+
     it('rejects a value of the wrong type without writing anything', async () => {
       await expect(
         controller.update({ values: { 'delivery.maxConcurrentPerPeer': 'not-a-number' } }),
