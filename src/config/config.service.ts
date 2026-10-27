@@ -10,6 +10,7 @@ import type { LoggingConfigDto } from './schema/logging.config.dto';
 import type { OutputConfigDto } from './schema/output.config.dto';
 import type { PeerOnboardingConfigDto } from './schema/peer-onboarding.config.dto';
 import type { RetryConfigDto } from './schema/retry.config.dto';
+import type { SecurityConfigDto } from './schema/security.config.dto';
 import type { ShutdownConfigDto } from './schema/shutdown.config.dto';
 
 @Injectable()
@@ -62,5 +63,9 @@ export class ConfigService {
 
   get egress(): EgressConfigDto {
     return this.cache.getSchema().egress;
+  }
+
+  get security(): SecurityConfigDto {
+    return this.cache.getSchema().security;
   }
 }

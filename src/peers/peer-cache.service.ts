@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { DbChangeNotifier } from '../common/db-change-notifier';
 import { registerSecret } from '../common/logging/secret-redactor';
+import { SecretCipherService } from '../common/security/secret-cipher.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PEER_REMOVAL_LISTENER, type PeerRemovalListener } from './peer-removal.tokens';
 import {
@@ -46,6 +47,8 @@ export class PeerCacheService implements OnModuleInit, OnModuleDestroy {
     @Optional()
     @Inject(PEER_STORE_STATUS_LISTENER)
     private readonly storeStatusListener?: PeerStoreStatusListener,
+    @Optional()
+    private readonly secretCipher?: SecretCipherService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -96,8 +99,10 @@ export class PeerCacheService implements OnModuleInit, OnModuleDestroy {
       const byId = new Map<string, CachedPeer>();
       const byApiKeyHash = new Map<string, CachedPeer>();
       for (const row of rows) {
-        registerSecret(row.theirApiKey);
-        const record: CachedPeer = { ...row };
+        const theirApiKey =
+          this.secretCipher?.decryptFromStorage(row.theirApiKey) ?? row.theirApiKey;
+        registerSecret(theirApiKey);
+        const record: CachedPeer = { ...row, theirApiKey };
         byId.set(row.id, record);
         byApiKeyHash.set(row.apiKeyHash, record);
       }

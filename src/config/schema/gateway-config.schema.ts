@@ -10,6 +10,7 @@ import { LoggingConfigDto } from './logging.config.dto';
 import { OutputConfigDto } from './output.config.dto';
 import { PeerOnboardingConfigDto } from './peer-onboarding.config.dto';
 import { RetryConfigDto } from './retry.config.dto';
+import { SecurityConfigDto } from './security.config.dto';
 import { ShutdownConfigDto } from './shutdown.config.dto';
 
 export class GatewayConfigSchema {
@@ -56,4 +57,8 @@ export class GatewayConfigSchema {
   @ValidateNested()
   @Type(() => EgressConfigDto)
   egress!: EgressConfigDto;
+
+  @ValidateNested()
+  @Type(() => SecurityConfigDto)
+  security!: SecurityConfigDto;
 }

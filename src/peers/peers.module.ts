@@ -1,6 +1,7 @@
 import { HttpModule } from '@nestjs/axios';
 import { Global, Module } from '@nestjs/common';
 import { EgressPolicyModule } from '../common/security/egress-policy.module';
+import { SecretCipherModule } from '../common/security/secret-cipher.module';
 import { ConfigModule } from '../config/config.module';
 import { PEER_SEED_WRITER } from '../config/entity-seed.tokens';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -15,6 +16,7 @@ import { PeersService } from './peers.service';
     ConfigModule,
     HttpModule.register({ maxRedirects: 0 }),
     EgressPolicyModule,
+    SecretCipherModule,
   ],
   providers: [
     PeersService,
