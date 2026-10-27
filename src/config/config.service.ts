@@ -4,6 +4,7 @@ import type { AuditConfigDto } from './schema/audit.config.dto';
 import type { CircuitBreakerConfigDto } from './schema/circuit-breaker.config.dto';
 import type { DatabaseConfigDto } from './schema/database.config.dto';
 import type { DeliveryConfigDto } from './schema/delivery.config.dto';
+import type { EgressConfigDto } from './schema/egress.config.dto';
 import type { GatewayConfigDto } from './schema/gateway.config.dto';
 import type { LoggingConfigDto } from './schema/logging.config.dto';
 import type { OutputConfigDto } from './schema/output.config.dto';
@@ -57,5 +58,9 @@ export class ConfigService {
 
   get peerOnboarding(): PeerOnboardingConfigDto {
     return this.cache.getSchema().peerOnboarding;
+  }
+
+  get egress(): EgressConfigDto {
+    return this.cache.getSchema().egress;
   }
 }

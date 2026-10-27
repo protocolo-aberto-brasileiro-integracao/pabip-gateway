@@ -234,4 +234,20 @@ export const CONFIG_FIELDS: ConfigFieldDefinition[] = [
     bootOnly: false,
     default: 20000,
   },
+  {
+    key: 'egress.requireHttps',
+    section: 'egress',
+    envVar: 'GATEWAY_EGRESS_REQUIRE_HTTPS',
+    type: 'boolean',
+    bootOnly: false,
+    default: true,
+  },
+  {
+    key: 'egress.allowPrivateDestinations',
+    section: 'egress',
+    envVar: 'GATEWAY_EGRESS_ALLOW_PRIVATE',
+    type: 'boolean',
+    bootOnly: false,
+    default: false,
+  },
 ];

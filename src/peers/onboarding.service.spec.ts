@@ -1,6 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import nock from 'nock';
 import { KeyIssuanceService } from '../auth/key-issuance.service';
+import { EgressPolicyService } from '../common/security/egress-policy';
 import { OnboardingService } from './onboarding.service';
 import { PeerUnreachableError } from './peer-onboarding.error';
 
@@ -9,7 +10,12 @@ describe('OnboardingService', () => {
   let service: OnboardingService;
 
   beforeEach(() => {
-    service = new OnboardingService(new HttpService(), new KeyIssuanceService());
+    const configService = { egress: { requireHttps: true, allowPrivateDestinations: true } };
+    service = new OnboardingService(
+      new HttpService(),
+      new KeyIssuanceService(),
+      new EgressPolicyService(configService as never),
+    );
   });
 
   afterEach(() => {
@@ -64,6 +70,24 @@ describe('OnboardingService', () => {
     await expect(
       service.onboard({ baseUrl: BASE_URL, theirApiKey: 'their-key', timeoutMs: 2_000 }),
     ).rejects.toThrow(/connection reset by peer/);
+  });
+
+  it('throws PeerUnreachableError when the baseUrl violates the outbound egress policy', async () => {
+    const strictService = new OnboardingService(
+      new HttpService(),
+      new KeyIssuanceService(),
+      new EgressPolicyService({
+        egress: { requireHttps: true, allowPrivateDestinations: false },
+      } as never),
+    );
+
+    await expect(
+      strictService.onboard({
+        baseUrl: 'http://127.0.0.1:1234',
+        theirApiKey: 'their-key',
+        timeoutMs: 2_000,
+      }),
+    ).rejects.toThrow(PeerUnreachableError);
   });
 
   it('treats a manifest with no items as zero capabilities, not a failure', async () => {
