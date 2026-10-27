@@ -35,6 +35,7 @@ describe('PeersService', () => {
   let getById: jest.Mock;
   let issueKey: jest.Mock;
   let assertUrlAllowed: jest.Mock;
+  let encryptForStorage: jest.Mock;
   let configService: { peerOnboarding: { onboardingValidationTimeoutMs: number } };
   let service: PeersService;
 
@@ -79,6 +80,7 @@ describe('PeersService', () => {
     getById = jest.fn();
     issueKey = jest.fn().mockReturnValue({ apiKey: 'ak_live_rotated', apiKeyHash: 'hash-rotated' });
     assertUrlAllowed = jest.fn().mockResolvedValue(undefined);
+    encryptForStorage = jest.fn((plaintext: string) => `v1:encrypted(${plaintext})`);
     configService = { peerOnboarding: { onboardingValidationTimeoutMs: 5_000 } };
     service = new PeersService(
       prisma as never,
@@ -87,6 +89,7 @@ describe('PeersService', () => {
       { getById } as never,
       { issue: issueKey },
       { assertUrlAllowed } as never,
+      { encryptForStorage } as never,
     );
   });
 
@@ -106,6 +109,17 @@ describe('PeersService', () => {
       expect(createCall.data.ipAllowlist).toEqual([]);
       expect(result.issuedApiKey).toBe('ak_live_new');
       expect(executeRawUnsafe).toHaveBeenCalledWith('NOTIFY peers_changed');
+    });
+
+    it('stores the encrypted theirApiKey while onboarding still receives the plaintext', async () => {
+      await service.create(dto);
+
+      expect(onboard).toHaveBeenCalledWith(expect.objectContaining({ theirApiKey: 'their-key' }));
+      expect(encryptForStorage).toHaveBeenCalledWith('their-key');
+      const createCall = (create.mock.calls[0] as unknown[])[0] as {
+        data: { theirApiKey: string };
+      };
+      expect(createCall.data.theirApiKey).toBe('v1:encrypted(their-key)');
     });
 
     it('never exposes theirApiKey/apiKeyHash on the response', async () => {

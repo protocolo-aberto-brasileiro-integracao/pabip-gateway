@@ -114,6 +114,28 @@ describe('PeerCacheService', () => {
     expect(onPeerRemoved).not.toHaveBeenCalled();
   });
 
+  describe('secret decryption', () => {
+    it('decrypts theirApiKey through the secret cipher before caching and registering it', async () => {
+      findMany.mockResolvedValue([buildRow({ theirApiKey: 'v1:encrypted(their-key)' })]);
+      const decryptFromStorage = jest.fn().mockReturnValue('their-key');
+      const service = new PeerCacheService(prisma as never, undefined, undefined, {
+        decryptFromStorage,
+      } as never);
+
+      await service.onModuleInit();
+
+      expect(decryptFromStorage).toHaveBeenCalledWith('v1:encrypted(their-key)');
+      expect(service.getById('peer-1')?.theirApiKey).toBe('their-key');
+    });
+
+    it('leaves theirApiKey untouched when no secret cipher is bound', async () => {
+      const service = new PeerCacheService(prisma as never);
+      await service.onModuleInit();
+
+      expect(service.getById('peer-1')?.theirApiKey).toBe('their-key');
+    });
+  });
+
   describe('peer store availability', () => {
     it('reports no initial snapshot and an available store before the first reload', () => {
       const service = new PeerCacheService(prisma as never);

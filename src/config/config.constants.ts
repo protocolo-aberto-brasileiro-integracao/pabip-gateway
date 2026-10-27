@@ -250,4 +250,13 @@ export const CONFIG_FIELDS: ConfigFieldDefinition[] = [
     bootOnly: false,
     default: false,
   },
+  {
+    key: 'security.secretEncryptionKey',
+    section: 'security',
+    envVar: 'GATEWAY_SECRET_ENCRYPTION_KEY',
+    type: 'string',
+    bootOnly: true,
+    sensitive: true,
+    default: '',
+  },
 ];
