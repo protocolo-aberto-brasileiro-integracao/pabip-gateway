@@ -11,6 +11,7 @@ export interface DeliveryAuditEvent {
   eventIds: string[];
   attempts: number;
   detail: string;
+  requestId?: string;
 }
 
 export interface AuditSinkWriter {

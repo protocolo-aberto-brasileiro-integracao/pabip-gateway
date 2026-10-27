@@ -1,6 +1,9 @@
+import { Logger } from '@nestjs/common';
 import { of, throwError } from 'rxjs';
 import { CallbackDriver } from './callback.driver';
 import type { DeliveryBatch } from '../output-sink.interface';
+
+const UUID_V7_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 function buildBatch(): DeliveryBatch {
   return {
@@ -59,6 +62,56 @@ describe('CallbackDriver', () => {
       'X-Peer-Id': 'peer-1',
       'X-Batch-Type': 'plate',
     });
+  });
+
+  it('sends a fresh UUID v7 X-Request-Id on each delivery attempt', async () => {
+    const post = jest.fn().mockReturnValue(of({ status: 200, data: {}, headers: {} }));
+    const driver = new CallbackDriver(
+      { post } as never,
+      {
+        output: { callback: { url: 'https://legacy.example.test/webhooks/pabip', headers: {} } },
+      } as never,
+    );
+
+    await driver.deliver(buildBatch(), 'peer-1', 'plate');
+    await driver.deliver(buildBatch(), 'peer-1', 'plate');
+
+    type PostArgs = [string, unknown, { headers: Record<string, string> }];
+    const [, , firstOptions] = post.mock.calls[0] as PostArgs;
+    const [, , secondOptions] = post.mock.calls[1] as PostArgs;
+    const firstId = firstOptions.headers['X-Request-Id'];
+    const secondId = secondOptions.headers['X-Request-Id'];
+    expect(firstId).toMatch(UUID_V7_PATTERN);
+    expect(secondId).toMatch(UUID_V7_PATTERN);
+    expect(firstId).not.toBe(secondId);
+  });
+
+  it('logs the sent request id, the id echoed back by the receiver, and the response status', async () => {
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    const post = jest
+      .fn()
+      .mockReturnValue(of({ status: 202, data: {}, headers: { 'x-request-id': 'echoed-id' } }));
+    const driver = new CallbackDriver(
+      { post } as never,
+      {
+        output: { callback: { url: 'https://legacy.example.test/webhooks/pabip', headers: {} } },
+      } as never,
+    );
+
+    await driver.deliver(buildBatch(), 'peer-1', 'plate');
+
+    const [, , options] = post.mock.calls[0] as [
+      string,
+      unknown,
+      { headers: Record<string, string> },
+    ];
+    const sentId = options.headers['X-Request-Id'];
+    const [message] = log.mock.calls[0] as [string];
+    expect(message).toContain('batchId=batch-1');
+    expect(message).toContain(`requestId=${sentId}`);
+    expect(message).toContain('echoedRequestId=echoed-id');
+    expect(message).toContain('status=202');
+    log.mockRestore();
   });
 
   it('throws when output.callback.url is not configured', async () => {

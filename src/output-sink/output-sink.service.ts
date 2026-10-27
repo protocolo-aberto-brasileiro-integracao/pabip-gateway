@@ -33,7 +33,12 @@ export class OutputSinkService {
     private readonly metricsRecorder?: DeliveryMetricsRecorder,
   ) {}
 
-  async deliver(batch: DeliveryBatch, peerId: string, batchType: string): Promise<void> {
+  async deliver(
+    batch: DeliveryBatch,
+    peerId: string,
+    batchType: string,
+    requestId?: string,
+  ): Promise<void> {
     try {
       await this.concurrencyLimiter.run(peerId, () =>
         this.deliverWithRetry(batch, peerId, batchType),
@@ -48,6 +53,7 @@ export class OutputSinkService {
           eventIds: batch.events.map((event) => event.eventId),
           attempts: 0,
           detail: error.message,
+          requestId,
         });
         return;
       }
@@ -60,6 +66,7 @@ export class OutputSinkService {
         eventIds: batch.events.map((event) => event.eventId),
         attempts: this.configService.retry.maxAttempts,
         detail: describeError(error),
+        requestId,
       });
     }
   }

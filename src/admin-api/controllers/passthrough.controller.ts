@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { AuditService } from '../../audit/audit.service';
+import { Trace } from '../../common/trace.decorator';
+import type { TraceContext } from '../../common/request-id.util';
 import { PeersAccessGuard } from '../../auth/guards/peers-access.guard';
 import { OperationLogService } from '../../operation-log/operation-log.service';
 import { PeersService, type PeerListResult } from '../../peers/peers.service';
@@ -63,13 +65,14 @@ export class PassthroughController {
     @Param('peerId') peerId: string,
     @Param('nodeId') nodeId: string,
     @Body() body: VideoSessionRequestDto,
+    @Trace() trace: TraceContext,
   ): Promise<VideoSession> {
     const result = await this.outboundClient.createVideoSession(peerId, nodeId, body);
     const operationType =
       body.startDate && body.endDate
         ? 'video_session_history_requested'
         : 'video_session_live_requested';
-    this.operationLogService.record(operationType, peerId, { nodeId });
+    this.operationLogService.record(operationType, peerId, { nodeId }, trace);
     return result;
   }
 
@@ -87,6 +90,7 @@ export class PassthroughController {
   async getImageAnalyticsEvent(
     @Param('peerId') peerId: string,
     @Param('eventId') eventId: string,
+    @Trace() trace: TraceContext,
   ): Promise<unknown> {
     const result = await this.outboundClient.getImageAnalyticsEvent(peerId, eventId);
     this.auditService.record({
@@ -94,6 +98,9 @@ export class PassthroughController {
       action: 'image_analytics_read',
       peerId,
       detail: `eventId=${eventId}`,
+      requestId: trace.requestId,
+      actorId: trace.actorId,
+      caseRef: trace.caseRef,
     });
     return result;
   }

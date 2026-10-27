@@ -10,9 +10,9 @@ describe('IngestionController', () => {
     const batch = { batchId: 'batch-1' } as AnalyticsBatchDto;
     const peer = { id: 'peer-1', name: 'acme' } as never;
 
-    const response = controller.ingest(batch, peer);
+    const response = controller.ingest(batch, peer, { requestId: 'req-1' });
 
-    expect(ingestionService.ingest).toHaveBeenCalledWith(batch, peer);
+    expect(ingestionService.ingest).toHaveBeenCalledWith(batch, peer, 'req-1');
     expect(response).toBe(expectedResponse);
   });
 });

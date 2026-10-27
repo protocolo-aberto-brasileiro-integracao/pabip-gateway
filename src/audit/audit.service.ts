@@ -32,6 +32,7 @@ export class AuditService implements AuditSinkWriter, PeerStoreStatusListener {
       action: event.reason,
       peerId: event.peerId,
       detail: event.detail,
+      requestId: event.requestId,
       metadata: {
         batchId: event.batchId,
         batchType: event.batchType,

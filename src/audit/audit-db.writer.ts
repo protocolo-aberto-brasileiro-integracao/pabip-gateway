@@ -14,6 +14,9 @@ export class AuditDbWriter {
         action: event.action,
         peerId: event.peerId,
         detail: event.detail,
+        requestId: 'requestId' in event ? event.requestId : undefined,
+        actorId: 'actorId' in event ? event.actorId : undefined,
+        caseRef: 'caseRef' in event ? event.caseRef : undefined,
         metadata: event.metadata as Prisma.InputJsonValue | undefined,
       },
     });

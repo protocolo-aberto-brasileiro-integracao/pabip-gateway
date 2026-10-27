@@ -1,8 +1,9 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { firstValueFrom } from 'rxjs';
 import { ConfigService } from '../../config/config.service';
 import { registerSecret } from '../../common/logging/secret-redactor';
+import { uuidv7 } from '../../common/request-id.util';
 import type { DeliveryBatch, OutputSinkDriver } from '../output-sink.interface';
 
 const ENV_INTERPOLATION_PATTERN = /\$\{([^}]+)\}/g;
@@ -11,6 +12,8 @@ const CALLBACK_TIMEOUT_MS = 10_000;
 
 @Injectable()
 export class CallbackDriver implements OutputSinkDriver {
+  private readonly logger = new Logger(CallbackDriver.name);
+
   constructor(
     private readonly http: HttpService,
     private readonly configService: ConfigService,
@@ -23,14 +26,38 @@ export class CallbackDriver implements OutputSinkDriver {
     }
 
     const resolvedHeaders = resolveHeaders(headers ?? {});
+    const requestId = uuidv7();
 
-    await firstValueFrom(
+    const response = await firstValueFrom(
       this.http.post(url, batch, {
-        headers: { ...resolvedHeaders, 'X-Peer-Id': peerId, 'X-Batch-Type': batchType },
+        headers: {
+          ...resolvedHeaders,
+          'X-Peer-Id': peerId,
+          'X-Batch-Type': batchType,
+          'X-Request-Id': requestId,
+        },
         timeout: CALLBACK_TIMEOUT_MS,
       }),
     );
+
+    const echoedRequestId = firstResponseHeader(response?.headers, 'x-request-id');
+    this.logger.log(
+      `callback delivery batchId=${batch.batchId} requestId=${requestId} ` +
+        `echoedRequestId=${echoedRequestId ?? 'none'} status=${response?.status ?? 'unknown'}`,
+      { peerId, batchId: batch.batchId },
+    );
   }
+}
+
+function firstResponseHeader(headers: unknown, name: string): string | undefined {
+  if (typeof headers !== 'object' || headers === null) {
+    return undefined;
+  }
+  const value = (headers as Record<string, unknown>)[name];
+  if (Array.isArray(value)) {
+    return typeof value[0] === 'string' ? value[0] : undefined;
+  }
+  return typeof value === 'string' ? value : undefined;
 }
 
 function resolveHeaders(headers: Record<string, string>): Record<string, string> {
