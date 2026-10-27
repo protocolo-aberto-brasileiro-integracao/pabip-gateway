@@ -18,6 +18,7 @@ const DEV_MODE_FIELD = requireConfigField('gateway.devMode');
 const PUBLIC_PORT_FIELD = requireConfigField('gateway.publicPort');
 const ADMIN_PORT_FIELD = requireConfigField('gateway.adminPort');
 const TRUSTED_PROXY_CIDRS_FIELD = requireConfigField('gateway.trustedProxyCidrs');
+const ENABLE_API_DOCS_FIELD = requireConfigField('gateway.enableApiDocs');
 
 export function resolveDatabaseUrl(): string {
   const resolved = resolveField(DATABASE_URL_FIELD);
@@ -46,6 +47,12 @@ export function resolveTrustedProxyCidrs(): string[] {
   const resolved = resolveField(TRUSTED_PROXY_CIDRS_FIELD);
   const raw = resolved && typeof resolved.value === 'string' ? resolved.value : '';
   return parseTrustedProxyCidrs(raw);
+}
+
+export function resolveApiDocsEnabled(): boolean {
+  const resolved = resolveField(ENABLE_API_DOCS_FIELD);
+  const explicitlyEnabled = resolved ? Boolean(resolved.value) : false;
+  return explicitlyEnabled || process.env.NODE_ENV !== 'production';
 }
 
 function resolvePortField(field: ConfigFieldDefinition, key: string): number {

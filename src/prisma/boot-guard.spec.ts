@@ -8,6 +8,7 @@ import {
   assertShutdownGracePeriodAllowed,
   ORCH_TERMINATION_GRACE_PERIOD_ENV_VAR,
   resolveAdminPort,
+  resolveApiDocsEnabled,
   resolveDatabaseUrl,
   resolveDevMode,
   resolvePublicPort,
@@ -78,6 +79,26 @@ describe('boot-guard', () => {
     it('reads true from ENV', () => {
       process.env.GATEWAY_DEV_MODE = 'true';
       expect(resolveDevMode()).toBe(true);
+    });
+  });
+
+  describe('resolveApiDocsEnabled', () => {
+    it('defaults to enabled when NODE_ENV is not production', () => {
+      process.env.NODE_ENV = 'development';
+      delete process.env.GATEWAY_ENABLE_API_DOCS;
+      expect(resolveApiDocsEnabled()).toBe(true);
+    });
+
+    it('defaults to disabled when NODE_ENV is production', () => {
+      process.env.NODE_ENV = 'production';
+      delete process.env.GATEWAY_ENABLE_API_DOCS;
+      expect(resolveApiDocsEnabled()).toBe(false);
+    });
+
+    it('allows an explicit opt-in override in production', () => {
+      process.env.NODE_ENV = 'production';
+      process.env.GATEWAY_ENABLE_API_DOCS = 'true';
+      expect(resolveApiDocsEnabled()).toBe(true);
     });
   });
 

@@ -16,6 +16,7 @@ import { IngestionModule } from './ingestion/ingestion.module';
 import {
   assertShutdownGracePeriodAllowed,
   resolveAdminPort,
+  resolveApiDocsEnabled,
   resolvePublicPort,
   resolveTrustedProxyCidrs,
 } from './prisma/boot-guard';
@@ -34,30 +35,32 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new ProblemDetailsFilter());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
-  const adminApiDocument = SwaggerModule.createDocument(
-    app,
-    new DocumentBuilder()
-      .setTitle('pabip-gateway admin-api')
-      .setDescription('Peers, admin tokens, config, and peer passthrough.')
-      .setVersion('1')
-      .addApiKey({ type: 'apiKey', name: 'X-Admin-Token', in: 'header' }, 'AdminToken')
-      .addApiKey({ type: 'apiKey', name: 'X-Client-Token', in: 'header' }, 'ClientToken')
-      .build(),
-    { include: [AdminApiModule] },
-  );
-  SwaggerModule.setup('admin/docs', app, adminApiDocument);
+  if (resolveApiDocsEnabled()) {
+    const adminApiDocument = SwaggerModule.createDocument(
+      app,
+      new DocumentBuilder()
+        .setTitle('pabip-gateway admin-api')
+        .setDescription('Peers, admin tokens, config, and peer passthrough.')
+        .setVersion('1')
+        .addApiKey({ type: 'apiKey', name: 'X-Admin-Token', in: 'header' }, 'AdminToken')
+        .addApiKey({ type: 'apiKey', name: 'X-Client-Token', in: 'header' }, 'ClientToken')
+        .build(),
+      { include: [AdminApiModule] },
+    );
+    SwaggerModule.setup('admin/docs', app, adminApiDocument);
 
-  const ingestionDocument = SwaggerModule.createDocument(
-    app,
-    new DocumentBuilder()
-      .setTitle('pabip-gateway ingestion')
-      .setDescription('POST /image-analytics/events — protocol §6.1/§6.2.')
-      .setVersion('1')
-      .addApiKey({ type: 'apiKey', name: 'X-API-Key', in: 'header' }, 'ApiKey')
-      .build(),
-    { include: [IngestionModule] },
-  );
-  SwaggerModule.setup('image-analytics/docs', app, ingestionDocument);
+    const ingestionDocument = SwaggerModule.createDocument(
+      app,
+      new DocumentBuilder()
+        .setTitle('pabip-gateway ingestion')
+        .setDescription('POST /image-analytics/events — protocol §6.1/§6.2.')
+        .setVersion('1')
+        .addApiKey({ type: 'apiKey', name: 'X-API-Key', in: 'header' }, 'ApiKey')
+        .build(),
+      { include: [IngestionModule] },
+    );
+    SwaggerModule.setup('image-analytics/docs', app, ingestionDocument);
+  }
 
   await app.init();
 
