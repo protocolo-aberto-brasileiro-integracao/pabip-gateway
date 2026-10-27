@@ -1,5 +1,3 @@
-export type AuditCategory = 'delivery' | 'peer_store' | 'access';
-
 export type DeliveryAuditAction =
   'delivery_failed' | 'peer_concurrency_exceeded' | 'delivery_interrupted';
 

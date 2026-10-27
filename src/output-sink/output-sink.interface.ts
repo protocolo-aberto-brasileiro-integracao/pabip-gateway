@@ -1,6 +1,5 @@
 export type {
   DeliveryBatch,
-  DeliveryEvent,
   OutputSinkDriver,
 } from '@protocolo-aberto-brasileiro-integracao/pabip-sdk';
 
