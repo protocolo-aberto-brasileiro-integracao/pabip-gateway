@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -8,6 +9,7 @@ import {
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { KeyIssuanceService } from '../auth/key-issuance.service';
+import { EgressPolicyService } from '../common/security/egress-policy';
 import { ConfigService } from '../config/config.service';
 import type { PeerSeedWriter } from '../config/entity-seed.tokens';
 import { registerSecret } from '../common/logging/secret-redactor';
@@ -43,6 +45,7 @@ export class PeersService implements PeerSeedWriter {
     private readonly configService: ConfigService,
     private readonly peerCache: PeerCacheService,
     private readonly keyIssuance: KeyIssuanceService,
+    private readonly egressPolicy: EgressPolicyService,
   ) {}
 
   async create(dto: CreatePeerDto): Promise<PeerResponseDto> {
@@ -125,6 +128,16 @@ export class PeersService implements PeerSeedWriter {
     id: string,
     patch: Partial<Pick<CreatePeerDto, 'name' | 'baseUrl' | 'scopes' | 'ipAllowlist'>>,
   ): Promise<PeerResponseDto> {
+    if (patch.baseUrl) {
+      try {
+        await this.egressPolicy.assertUrlAllowed(patch.baseUrl);
+      } catch (error) {
+        throw new BadRequestException(
+          error instanceof Error ? error.message : 'baseUrl violates the outbound egress policy.',
+        );
+      }
+    }
+
     try {
       const row = await this.prisma.peer.update({ where: { id }, data: patch });
       await this.notifyChanged();

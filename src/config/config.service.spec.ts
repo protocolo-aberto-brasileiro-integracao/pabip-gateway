@@ -15,6 +15,7 @@ describe('ConfigService', () => {
       retry: { maxAttempts: 5 },
       audit: { sink: 'stdout' },
       peerOnboarding: { onboardingValidationTimeoutMs: 5000 },
+      egress: { requireHttps: true, allowPrivateDestinations: false },
     } as unknown as GatewayConfigSchema;
 
     const cache: Pick<ConfigCacheService, 'getSchema'> = { getSchema: () => schema };
@@ -30,6 +31,7 @@ describe('ConfigService', () => {
     expect(service.retry).toBe(schema.retry);
     expect(service.audit).toBe(schema.audit);
     expect(service.peerOnboarding).toBe(schema.peerOnboarding);
+    expect(service.egress).toBe(schema.egress);
   });
 
   it('write() forwards to ConfigCacheService.writeApiValue()', async () => {

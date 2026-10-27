@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AxiosError } from 'axios';
 import { firstValueFrom } from 'rxjs';
 import { KeyIssuanceService } from '../auth/key-issuance.service';
+import { EgressPolicyService } from '../common/security/egress-policy';
 import { PeerUnreachableError } from './peer-onboarding.error';
 
 interface SensorNodeManifestItem {
@@ -32,6 +33,7 @@ export class OnboardingService {
   constructor(
     private readonly http: HttpService,
     private readonly keyIssuance: KeyIssuanceService,
+    private readonly egressPolicy: EgressPolicyService,
   ) {}
 
   async onboard(input: OnboardingInput): Promise<OnboardingResult> {
@@ -45,10 +47,12 @@ export class OnboardingService {
 
     let response: { data: SensorNodeManifestResponse };
     try {
+      await this.egressPolicy.assertUrlAllowed(url);
       response = await firstValueFrom(
         this.http.get<SensorNodeManifestResponse>(url, {
           headers: { 'X-API-Key': input.theirApiKey },
           timeout: input.timeoutMs,
+          maxRedirects: 0,
         }),
       );
     } catch (error) {

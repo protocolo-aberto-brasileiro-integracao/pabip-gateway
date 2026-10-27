@@ -1,4 +1,9 @@
-import { ConflictException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { PeerUnreachableError } from './peer-onboarding.error';
 import { PeersService } from './peers.service';
@@ -29,6 +34,7 @@ describe('PeersService', () => {
   let onboard: jest.Mock;
   let getById: jest.Mock;
   let issueKey: jest.Mock;
+  let assertUrlAllowed: jest.Mock;
   let configService: { peerOnboarding: { onboardingValidationTimeoutMs: number } };
   let service: PeersService;
 
@@ -72,6 +78,7 @@ describe('PeersService', () => {
     });
     getById = jest.fn();
     issueKey = jest.fn().mockReturnValue({ apiKey: 'ak_live_rotated', apiKeyHash: 'hash-rotated' });
+    assertUrlAllowed = jest.fn().mockResolvedValue(undefined);
     configService = { peerOnboarding: { onboardingValidationTimeoutMs: 5_000 } };
     service = new PeersService(
       prisma as never,
@@ -79,6 +86,7 @@ describe('PeersService', () => {
       configService as never,
       { getById } as never,
       { issue: issueKey },
+      { assertUrlAllowed } as never,
     );
   });
 
@@ -171,6 +179,24 @@ describe('PeersService', () => {
       await expect(service.update('peer-1', { name: 'x' })).rejects.toMatchObject({
         code: 'P2002',
       });
+    });
+
+    it('checks the egress policy when baseUrl is part of the patch', async () => {
+      await service.update('peer-1', { baseUrl: 'https://acme.example' });
+      expect(assertUrlAllowed).toHaveBeenCalledWith('https://acme.example');
+    });
+
+    it('skips the egress policy check when baseUrl is absent from the patch', async () => {
+      await service.update('peer-1', { name: 'acme-renamed' });
+      expect(assertUrlAllowed).not.toHaveBeenCalled();
+    });
+
+    it('rejects with BadRequestException and does not persist when baseUrl violates the egress policy', async () => {
+      assertUrlAllowed.mockRejectedValue(new Error('private destination blocked'));
+      await expect(
+        service.update('peer-1', { baseUrl: 'http://169.254.169.254/' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(update).not.toHaveBeenCalled();
     });
   });
 

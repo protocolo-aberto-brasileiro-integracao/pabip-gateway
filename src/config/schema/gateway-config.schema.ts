@@ -4,6 +4,7 @@ import { AuditConfigDto } from './audit.config.dto';
 import { CircuitBreakerConfigDto } from './circuit-breaker.config.dto';
 import { DatabaseConfigDto } from './database.config.dto';
 import { DeliveryConfigDto } from './delivery.config.dto';
+import { EgressConfigDto } from './egress.config.dto';
 import { GatewayConfigDto } from './gateway.config.dto';
 import { LoggingConfigDto } from './logging.config.dto';
 import { OutputConfigDto } from './output.config.dto';
@@ -51,4 +52,8 @@ export class GatewayConfigSchema {
   @ValidateNested()
   @Type(() => PeerOnboardingConfigDto)
   peerOnboarding!: PeerOnboardingConfigDto;
+
+  @ValidateNested()
+  @Type(() => EgressConfigDto)
+  egress!: EgressConfigDto;
 }

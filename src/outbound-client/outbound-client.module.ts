@@ -18,7 +18,12 @@ import { OutboundClientService } from './outbound-client.service';
 
 const httpAgent = new HttpAgent({ keepAlive: true, maxSockets: OUTBOUND_CLIENT_MAX_SOCKETS });
 const httpsAgent = new HttpsAgent({ keepAlive: true, maxSockets: OUTBOUND_CLIENT_MAX_SOCKETS });
-const http = axios.create({ httpAgent, httpsAgent, timeout: OUTBOUND_CLIENT_TIMEOUT_MS });
+const http = axios.create({
+  httpAgent,
+  httpsAgent,
+  timeout: OUTBOUND_CLIENT_TIMEOUT_MS,
+  maxRedirects: 0,
+});
 http.interceptors.request.use((config) => {
   config.timeout = OUTBOUND_CLIENT_TIMEOUT_MS;
   return config;
