@@ -1,7 +1,23 @@
+const mockRedisOn = jest.fn();
+const mockRedisQuit = jest.fn().mockResolvedValue('OK');
+
+jest.mock('ioredis', () => {
+  return jest.fn().mockImplementation(() => ({
+    on: mockRedisOn,
+    quit: mockRedisQuit,
+  }));
+});
+
+import Redis from 'ioredis';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
 import { RateLimiterService } from './rate-limiter.service';
 
 describe('RateLimiterService', () => {
+  beforeEach(() => {
+    delete process.env.GATEWAY_REDIS_URL;
+    delete process.env.REDIS_URL;
+  });
+
   it('allows requests within the inbound quota', async () => {
     const service = new RateLimiterService();
 
@@ -97,6 +113,70 @@ describe('RateLimiterService', () => {
 
       expect(otherTokenResult).toEqual({ allowed: true });
       expect(inboundResult).toEqual({ allowed: true });
+    });
+  });
+
+  describe('when a Redis URL is configured', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      process.env.GATEWAY_REDIS_URL = 'redis://fake-host:6379';
+    });
+
+    it('builds a single ioredis client and shares it across all quotas', () => {
+      new RateLimiterService();
+
+      expect(Redis).toHaveBeenCalledTimes(1);
+      expect(Redis).toHaveBeenCalledWith(
+        'redis://fake-host:6379',
+        expect.objectContaining({ enableOfflineQueue: false }),
+      );
+      expect(mockRedisOn).toHaveBeenCalledWith('error', expect.any(Function));
+    });
+
+    it('prefers GATEWAY_REDIS_URL over REDIS_URL when both are set', () => {
+      process.env.REDIS_URL = 'redis://other-host:6379';
+
+      new RateLimiterService();
+
+      expect(Redis).toHaveBeenCalledWith('redis://fake-host:6379', expect.any(Object));
+    });
+
+    it('falls back to REDIS_URL when GATEWAY_REDIS_URL is unset', () => {
+      delete process.env.GATEWAY_REDIS_URL;
+      process.env.REDIS_URL = 'redis://other-host:6379';
+
+      new RateLimiterService();
+
+      expect(Redis).toHaveBeenCalledWith('redis://other-host:6379', expect.any(Object));
+    });
+
+    it('fails open to the in-memory insurance limiter when the Redis store errors', async () => {
+      const service = new RateLimiterService();
+
+      const result = await service.consume('peer-redis-1', 'in');
+
+      expect(result).toEqual({ allowed: true });
+    });
+
+    it('still enforces the quota via the in-memory insurance limiter once Redis is unreachable', async () => {
+      const service = new RateLimiterService();
+
+      for (let i = 0; i < 300; i += 1) {
+        await service.consume('peer-redis-2', 'in');
+      }
+
+      const rejected = await service.consume('peer-redis-2', 'in');
+
+      expect(rejected.allowed).toBe(false);
+      expect(rejected.retryAfterSeconds).toBeGreaterThanOrEqual(1);
+    });
+
+    it('releases the ioredis client on module destroy', async () => {
+      const service = new RateLimiterService();
+
+      await service.onModuleDestroy();
+
+      expect(mockRedisQuit).toHaveBeenCalledTimes(1);
     });
   });
 });
