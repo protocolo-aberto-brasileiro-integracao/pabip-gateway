@@ -16,6 +16,7 @@ describe('ConfigService', () => {
       audit: { sink: 'stdout' },
       peerOnboarding: { onboardingValidationTimeoutMs: 5000 },
       egress: { requireHttps: true, allowPrivateDestinations: false },
+      security: { secretEncryptionKey: undefined },
     } as unknown as GatewayConfigSchema;
 
     const cache: Pick<ConfigCacheService, 'getSchema'> = { getSchema: () => schema };
@@ -32,6 +33,7 @@ describe('ConfigService', () => {
     expect(service.audit).toBe(schema.audit);
     expect(service.peerOnboarding).toBe(schema.peerOnboarding);
     expect(service.egress).toBe(schema.egress);
+    expect(service.security).toBe(schema.security);
   });
 
   it('write() forwards to ConfigCacheService.writeApiValue()', async () => {
