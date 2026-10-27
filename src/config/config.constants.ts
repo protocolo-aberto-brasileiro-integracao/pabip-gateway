@@ -81,6 +81,14 @@ export const CONFIG_FIELDS: ConfigFieldDefinition[] = [
     default: '',
   },
   {
+    key: 'gateway.enableApiDocs',
+    section: 'gateway',
+    envVar: 'GATEWAY_ENABLE_API_DOCS',
+    type: 'boolean',
+    bootOnly: true,
+    default: false,
+  },
+  {
     key: 'delivery.maxConcurrentPerPeer',
     section: 'delivery',
     envVar: 'DELIVERY_MAX_CONCURRENT_PER_PEER',
