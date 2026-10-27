@@ -7,8 +7,11 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { REQUEST_ID_HEADER, resolveRequestId } from '../request-id.util';
 
 const PROBLEM_JSON_CONTENT_TYPE = 'application/problem+json';
+
+const PROBLEM_TYPE_BASE_URL = 'https://protocolo-nacional.dev/problems/';
 
 export interface ProblemDetails {
   type: string;
@@ -24,6 +27,7 @@ interface ExceptionDescription {
   title: string;
   detail?: string;
   extensions?: Record<string, unknown>;
+  known?: boolean;
 }
 
 @Catch()
@@ -36,11 +40,11 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
     const instance = request?.originalUrl ?? request?.url;
 
-    const { status, title, detail, extensions } = this.describe(exception);
+    const { status, title, detail, extensions, known } = this.describe(exception);
     this.logException(exception, status, request);
 
     const body: ProblemDetails = {
-      type: 'about:blank',
+      type: known ? problemTypeUri(title) : 'about:blank',
       title,
       status,
       ...(detail ? { detail } : {}),
@@ -48,6 +52,9 @@ export class ProblemDetailsFilter implements ExceptionFilter {
       ...extensions,
     };
 
+    if (request) {
+      response.setHeader(REQUEST_ID_HEADER, resolveRequestId(request));
+    }
     response.status(status).contentType(PROBLEM_JSON_CONTENT_TYPE).send(body);
   }
 
@@ -73,7 +80,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const response = exception.getResponse();
 
     if (typeof response === 'string') {
-      return { status, title: httpStatusTitle(status), detail: response };
+      return { status, title: httpStatusTitle(status), detail: response, known: true };
     }
 
     const body = { ...(response as Record<string, unknown>) };
@@ -88,6 +95,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
         status,
         title: typeof error === 'string' ? error : httpStatusTitle(status),
         extensions: { errors: message, ...body },
+        known: true,
       };
     }
 
@@ -96,6 +104,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
       title: typeof error === 'string' ? error : httpStatusTitle(status),
       detail: typeof message === 'string' ? message : undefined,
       extensions: body,
+      known: true,
     };
   }
 
@@ -133,7 +142,13 @@ function describePayloadTooLargeError(exception: unknown): ExceptionDescription 
     status: HttpStatus.PAYLOAD_TOO_LARGE,
     title: httpStatusTitle(HttpStatus.PAYLOAD_TOO_LARGE),
     detail: typeof candidate.message === 'string' ? candidate.message : 'Payload too large.',
+    known: true,
   };
+}
+
+function problemTypeUri(title: string): string {
+  const slug = title.trim().toLowerCase().replace(/\s+/g, '-');
+  return `${PROBLEM_TYPE_BASE_URL}${slug}`;
 }
 
 function httpStatusTitle(status: number): string {

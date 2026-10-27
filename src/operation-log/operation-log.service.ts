@@ -18,6 +18,7 @@ export class OperationLogService {
     operationType: OperationType,
     peerId: string | undefined,
     metadata?: Record<string, unknown>,
+    trace?: { requestId?: string; actorId?: string; caseRef?: string },
   ): void {
     this.prisma.operationLog
       .create({
@@ -25,6 +26,9 @@ export class OperationLogService {
           operationType,
           peerId,
           metadata: metadata as Prisma.InputJsonValue | undefined,
+          requestId: trace?.requestId,
+          actorId: trace?.actorId,
+          caseRef: trace?.caseRef,
         },
       })
       .catch((error: unknown) => {

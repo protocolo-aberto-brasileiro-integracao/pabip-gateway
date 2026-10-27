@@ -28,11 +28,19 @@ describe('AppModule (e2e)', () => {
     expect(response.status).toBe(404);
     expect(response.headers['content-type']).toContain('application/problem+json');
     expect(response.body).toMatchObject({
-      type: 'about:blank',
+      type: 'https://protocolo-nacional.dev/problems/not-found',
       title: 'Not Found',
       status: 404,
       instance: '/does-not-exist',
     });
+  });
+
+  it('echoes an X-Request-Id header even on an error response', async () => {
+    const response = await request(app.getHttpServer() as Server)
+      .get('/peers/some-peer/image-analytics/evt-1')
+      .set('X-Request-Id', 'e2e.req-1');
+
+    expect(response.headers['x-request-id']).toBe('e2e.req-1');
   });
 
   it('serves /healthz once the process is up, independent of any peer or database state', async () => {

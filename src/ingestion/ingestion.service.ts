@@ -14,19 +14,26 @@ export class IngestionService {
     private readonly operationLog: OperationLogService,
   ) {}
 
-  ingest(batch: AnalyticsBatchDto, peer: CachedPeer): IngestResponseDto {
-    this.operationLog.record('analytics_batch_received', peer.id, {
-      batchId: batch.batchId,
-      batchType: batch.batchType,
-    });
+  ingest(batch: AnalyticsBatchDto, peer: CachedPeer, requestId?: string): IngestResponseDto {
+    this.operationLog.record(
+      'analytics_batch_received',
+      peer.id,
+      {
+        batchId: batch.batchId,
+        batchType: batch.batchType,
+      },
+      { requestId },
+    );
 
-    void this.outputSink.deliver(batch, peer.id, batch.batchType).catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `output-sink.deliver() rejected unexpectedly for peer "${peer.name}" batch "${batch.batchId}": ${message}`,
-        { peerId: peer.id, batchId: batch.batchId },
-      );
-    });
+    void this.outputSink
+      .deliver(batch, peer.id, batch.batchType, requestId)
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.error(
+          `output-sink.deliver() rejected unexpectedly for peer "${peer.name}" batch "${batch.batchId}": ${message}`,
+          { peerId: peer.id, batchId: batch.batchId },
+        );
+      });
 
     return { batchId: batch.batchId, acceptedCount: batch.events.length };
   }

@@ -8,6 +8,7 @@ export interface DeliveryAuditEntry {
   action: DeliveryAuditAction;
   peerId: string;
   detail: string;
+  requestId?: string;
   metadata: {
     batchId: string;
     batchType: string;
@@ -33,6 +34,9 @@ export interface AccessAuditEntry {
   action: AccessAuditAction;
   peerId: string;
   detail: string;
+  requestId?: string;
+  actorId?: string;
+  caseRef?: string;
   metadata?: Record<string, unknown>;
 }
 

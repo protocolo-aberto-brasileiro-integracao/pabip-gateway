@@ -6,6 +6,7 @@ interface FakeResponse {
   status: jest.Mock<FakeResponse, [number]>;
   contentType: jest.Mock<FakeResponse, [string]>;
   send: jest.Mock<FakeResponse, [ProblemDetails]>;
+  setHeader: jest.Mock<FakeResponse, [string, string]>;
 }
 
 function createResponse(): FakeResponse {
@@ -13,6 +14,7 @@ function createResponse(): FakeResponse {
   response.status = jest.fn<FakeResponse, [number]>().mockReturnValue(response);
   response.contentType = jest.fn<FakeResponse, [string]>().mockReturnValue(response);
   response.send = jest.fn<FakeResponse, [ProblemDetails]>().mockReturnValue(response);
+  response.setHeader = jest.fn<FakeResponse, [string, string]>().mockReturnValue(response);
   return response;
 }
 
@@ -51,13 +53,36 @@ describe('ProblemDetailsFilter', () => {
     expect(response.contentType).toHaveBeenCalledWith('application/problem+json');
     expect(response.send).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: 'about:blank',
+        type: 'https://protocolo-nacional.dev/problems/not-found',
         title: 'Not Found',
         status: 404,
         detail: 'route not found',
         instance: '/unknown',
       }),
     );
+  });
+
+  it('echoes an X-Request-Id response header, generating one when the request carries none', () => {
+    const response = createResponse();
+    const host = createHost({ method: 'GET', originalUrl: '/unknown', headers: {} }, response);
+
+    filter.catch(new NotFoundException('route not found'), host);
+
+    const [name, value] = response.setHeader.mock.calls[0];
+    expect(name).toBe('X-Request-Id');
+    expect(value).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('echoes back a well-formed inbound X-Request-Id unchanged', () => {
+    const response = createResponse();
+    const host = createHost(
+      { method: 'GET', originalUrl: '/unknown', headers: { 'x-request-id': 'abc.123:req-1' } },
+      response,
+    );
+
+    filter.catch(new NotFoundException('route not found'), host);
+
+    expect(response.setHeader).toHaveBeenCalledWith('X-Request-Id', 'abc.123:req-1');
   });
 
   it('surfaces class-validator style violations as an "errors" extension, not a squashed detail', () => {
@@ -93,7 +118,7 @@ describe('ProblemDetailsFilter', () => {
     expect(response.status).toHaveBeenCalledWith(403);
     const body = response.send.mock.calls[0][0];
     expect(body).toMatchObject({
-      type: 'about:blank',
+      type: 'https://protocolo-nacional.dev/problems/forbidden',
       title: 'Forbidden',
       status: 403,
       detail: 'you shall not pass',
@@ -125,7 +150,7 @@ describe('ProblemDetailsFilter', () => {
     expect(response.status).toHaveBeenCalledWith(413);
     const body = response.send.mock.calls[0][0];
     expect(body).toMatchObject({
-      type: 'about:blank',
+      type: 'https://protocolo-nacional.dev/problems/payload-too-large',
       title: 'Payload Too Large',
       status: 413,
       detail: 'request entity too large',

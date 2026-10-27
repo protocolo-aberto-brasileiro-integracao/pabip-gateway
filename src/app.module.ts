@@ -1,4 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, type MiddlewareConsumer, type NestModule } from '@nestjs/common';
+import { PassthroughController } from './admin-api/controllers/passthrough.controller';
+import { RequestIdMiddleware } from './common/request-id.middleware';
+import { IngestionController } from './ingestion/ingestion.controller';
 import { AdminApiModule } from './admin-api/admin-api.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
@@ -32,4 +35,8 @@ import { RateLimiterModule } from './rate-limiter/rate-limiter.module';
     ShutdownModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestIdMiddleware).forRoutes(IngestionController, PassthroughController);
+  }
+}

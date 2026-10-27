@@ -91,6 +91,12 @@ model AuditLog {
 
   detail String?
 
+  requestId String?
+
+  actorId String?
+
+  caseRef String?
+
   metadata Json?
 
   createdAt DateTime @default(now())
@@ -113,6 +119,12 @@ model OperationLog {
   operationType OperationType
 
   peerId String?
+
+  requestId String?
+
+  actorId String?
+
+  caseRef String?
 
   metadata Json?
 

@@ -1,4 +1,7 @@
 import { PassthroughController } from './passthrough.controller';
+import type { TraceContext } from '../../common/request-id.util';
+
+const TRACE: TraceContext = { requestId: 'req-1', actorId: 'actor-1', caseRef: 'case-1' };
 
 describe('PassthroughController', () => {
   let listSensorNodes: jest.Mock;
@@ -59,23 +62,29 @@ describe('PassthroughController', () => {
 
   it('createVideoSession() forwards peerId, nodeId, and body', async () => {
     const body = { startDate: '2026-01-01T00:00:00Z', endDate: '2026-01-01T01:00:00Z' };
-    await controller.createVideoSession('peer-1', 'node-1', body);
+    await controller.createVideoSession('peer-1', 'node-1', body, TRACE);
     expect(createVideoSession).toHaveBeenCalledWith('peer-1', 'node-1', body);
   });
 
   it('createVideoSession() records video_session_live_requested when startDate/endDate are absent', async () => {
-    await controller.createVideoSession('peer-1', 'node-1', {});
-    expect(operationLogRecord).toHaveBeenCalledWith('video_session_live_requested', 'peer-1', {
-      nodeId: 'node-1',
-    });
+    await controller.createVideoSession('peer-1', 'node-1', {}, TRACE);
+    expect(operationLogRecord).toHaveBeenCalledWith(
+      'video_session_live_requested',
+      'peer-1',
+      { nodeId: 'node-1' },
+      TRACE,
+    );
   });
 
   it('createVideoSession() records video_session_history_requested when startDate/endDate are present', async () => {
     const body = { startDate: '2026-01-01T00:00:00Z', endDate: '2026-01-01T01:00:00Z' };
-    await controller.createVideoSession('peer-1', 'node-1', body);
-    expect(operationLogRecord).toHaveBeenCalledWith('video_session_history_requested', 'peer-1', {
-      nodeId: 'node-1',
-    });
+    await controller.createVideoSession('peer-1', 'node-1', body, TRACE);
+    expect(operationLogRecord).toHaveBeenCalledWith(
+      'video_session_history_requested',
+      'peer-1',
+      { nodeId: 'node-1' },
+      TRACE,
+    );
   });
 
   it('getRecordings() forwards peerId and nodeId', async () => {
@@ -84,12 +93,12 @@ describe('PassthroughController', () => {
   });
 
   it('getImageAnalyticsEvent() forwards peerId and eventId', async () => {
-    await controller.getImageAnalyticsEvent('peer-1', 'event-1');
+    await controller.getImageAnalyticsEvent('peer-1', 'event-1', TRACE);
     expect(getImageAnalyticsEvent).toHaveBeenCalledWith('peer-1', 'event-1');
   });
 
-  it('getImageAnalyticsEvent() records an access audit event and still returns the result', async () => {
-    const result = await controller.getImageAnalyticsEvent('peer-1', 'event-1');
+  it('getImageAnalyticsEvent() records an access audit event with the trace context and still returns the result', async () => {
+    const result = await controller.getImageAnalyticsEvent('peer-1', 'event-1', TRACE);
 
     expect(result).toEqual({ eventId: 'evt-1' });
     expect(auditRecord).toHaveBeenCalledWith({
@@ -97,6 +106,9 @@ describe('PassthroughController', () => {
       action: 'image_analytics_read',
       peerId: 'peer-1',
       detail: 'eventId=event-1',
+      requestId: 'req-1',
+      actorId: 'actor-1',
+      caseRef: 'case-1',
     });
   });
 });

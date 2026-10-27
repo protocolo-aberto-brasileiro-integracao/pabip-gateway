@@ -30,10 +30,10 @@ describe('IngestionService', () => {
     const service = new IngestionService(outputSink as never, buildOperationLog() as never);
     const peer = { id: 'peer-1', name: 'acme' } as never;
 
-    const response = service.ingest(buildBatch(), peer);
+    const response = service.ingest(buildBatch(), peer, 'req-1');
 
     expect(response).toEqual({ batchId: 'batch-1', acceptedCount: 2 });
-    expect(outputSink.deliver).toHaveBeenCalledWith(buildBatch(), 'peer-1', 'plate');
+    expect(outputSink.deliver).toHaveBeenCalledWith(buildBatch(), 'peer-1', 'plate', 'req-1');
 
     resolveDelivery();
   });
@@ -55,12 +55,17 @@ describe('IngestionService', () => {
     const service = new IngestionService(outputSink as never, operationLog as never);
     const peer = { id: 'peer-1', name: 'acme' } as never;
 
-    service.ingest(buildBatch(), peer);
+    service.ingest(buildBatch(), peer, 'req-1');
 
-    expect(operationLog.record).toHaveBeenCalledWith('analytics_batch_received', 'peer-1', {
-      batchId: 'batch-1',
-      batchType: 'plate',
-    });
+    expect(operationLog.record).toHaveBeenCalledWith(
+      'analytics_batch_received',
+      'peer-1',
+      {
+        batchId: 'batch-1',
+        batchType: 'plate',
+      },
+      { requestId: 'req-1' },
+    );
   });
 
   it('never lets a rejected delivery promise escape as an unhandled rejection', async () => {
