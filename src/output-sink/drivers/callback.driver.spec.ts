@@ -64,7 +64,23 @@ describe('CallbackDriver', () => {
     });
   });
 
-  it('sends a fresh UUID v7 X-Request-Id on each delivery attempt', async () => {
+  it('forwards the inbound X-Request-Id to upstream when provided', async () => {
+    const post = jest.fn().mockReturnValue(of({ status: 200, data: {}, headers: {} }));
+    const driver = new CallbackDriver(
+      { post } as never,
+      {
+        output: { callback: { url: 'https://legacy.example.test/webhooks/pabip', headers: {} } },
+      } as never,
+    );
+
+    await driver.deliver(buildBatch(), 'peer-1', 'plate', 'inbound.req-1');
+
+    type PostArgs = [string, unknown, { headers: Record<string, string> }];
+    const [, , options] = post.mock.calls[0] as PostArgs;
+    expect(options.headers['X-Request-Id']).toBe('inbound.req-1');
+  });
+
+  it('generates a UUID v7 X-Request-Id when none is provided', async () => {
     const post = jest.fn().mockReturnValue(of({ status: 200, data: {}, headers: {} }));
     const driver = new CallbackDriver(
       { post } as never,
@@ -74,16 +90,10 @@ describe('CallbackDriver', () => {
     );
 
     await driver.deliver(buildBatch(), 'peer-1', 'plate');
-    await driver.deliver(buildBatch(), 'peer-1', 'plate');
 
     type PostArgs = [string, unknown, { headers: Record<string, string> }];
-    const [, , firstOptions] = post.mock.calls[0] as PostArgs;
-    const [, , secondOptions] = post.mock.calls[1] as PostArgs;
-    const firstId = firstOptions.headers['X-Request-Id'];
-    const secondId = secondOptions.headers['X-Request-Id'];
-    expect(firstId).toMatch(UUID_V7_PATTERN);
-    expect(secondId).toMatch(UUID_V7_PATTERN);
-    expect(firstId).not.toBe(secondId);
+    const [, , options] = post.mock.calls[0] as PostArgs;
+    expect(options.headers['X-Request-Id']).toMatch(UUID_V7_PATTERN);
   });
 
   it('logs the sent request id, the id echoed back by the receiver, and the response status', async () => {

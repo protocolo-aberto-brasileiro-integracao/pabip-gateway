@@ -19,14 +19,19 @@ export class CallbackDriver implements OutputSinkDriver {
     private readonly configService: ConfigService,
   ) {}
 
-  async deliver(batch: DeliveryBatch, peerId: string, batchType: string): Promise<void> {
+  async deliver(
+    batch: DeliveryBatch,
+    peerId: string,
+    batchType: string,
+    requestId?: string,
+  ): Promise<void> {
     const { url, headers } = this.configService.output.callback;
     if (!url) {
       throw new Error('output.callback.url is not configured; cannot deliver via callback.');
     }
 
     const resolvedHeaders = resolveHeaders(headers ?? {});
-    const requestId = uuidv7();
+    const outboundRequestId = requestId ?? uuidv7();
 
     const response = await firstValueFrom(
       this.http.post(url, batch, {
@@ -34,7 +39,7 @@ export class CallbackDriver implements OutputSinkDriver {
           ...resolvedHeaders,
           'X-Peer-Id': peerId,
           'X-Batch-Type': batchType,
-          'X-Request-Id': requestId,
+          'X-Request-Id': outboundRequestId,
         },
         timeout: CALLBACK_TIMEOUT_MS,
       }),
@@ -42,7 +47,7 @@ export class CallbackDriver implements OutputSinkDriver {
 
     const echoedRequestId = firstResponseHeader(response?.headers, 'x-request-id');
     this.logger.log(
-      `callback delivery batchId=${batch.batchId} requestId=${requestId} ` +
+      `callback delivery batchId=${batch.batchId} requestId=${outboundRequestId} ` +
         `echoedRequestId=${echoedRequestId ?? 'none'} status=${response?.status ?? 'unknown'}`,
       { peerId, batchId: batch.batchId },
     );

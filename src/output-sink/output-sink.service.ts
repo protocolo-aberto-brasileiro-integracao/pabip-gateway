@@ -41,7 +41,7 @@ export class OutputSinkService {
   ): Promise<void> {
     try {
       await this.concurrencyLimiter.run(peerId, () =>
-        this.deliverWithRetry(batch, peerId, batchType),
+        this.deliverWithRetry(batch, peerId, batchType, requestId),
       );
     } catch (error) {
       if (error instanceof PeerConcurrencyExceededError) {
@@ -75,6 +75,7 @@ export class OutputSinkService {
     batch: DeliveryBatch,
     peerId: string,
     batchType: string,
+    requestId?: string,
   ): Promise<void> {
     const trackingId = this.beginTracking(peerId, batch, batchType);
     try {
@@ -84,7 +85,7 @@ export class OutputSinkService {
       await withRetry(
         () =>
           this.circuitBreaker.execute(peerId, 'sink', () =>
-            driver.deliver(batch, peerId, batchType),
+            driver.deliver(batch, peerId, batchType, requestId),
           ),
         {
           maxAttempts,
