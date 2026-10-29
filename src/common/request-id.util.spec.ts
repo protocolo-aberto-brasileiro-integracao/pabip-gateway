@@ -51,7 +51,7 @@ describe('resolveRequestId', () => {
 });
 
 describe('resolveTrace', () => {
-  it('reads actorId and caseRef verbatim, without validating or truncating them', () => {
+  it('keeps well-formed actorId and caseRef identifiers', () => {
     const trace = resolveTrace(
       buildRequest({
         'x-request-id': 'req-1',
@@ -64,6 +64,18 @@ describe('resolveTrace', () => {
       actorId: 'user@example.com',
       caseRef: 'PROC-2026/12345',
     });
+  });
+
+  it('drops actorId and caseRef that break the charset or length bound', () => {
+    const trace = resolveTrace(
+      buildRequest({
+        'x-request-id': 'req-1',
+        'x-actor-id': 'spoofed\noperator',
+        'x-case-ref': 'x'.repeat(129),
+      }),
+    );
+    expect(trace.actorId).toBeUndefined();
+    expect(trace.caseRef).toBeUndefined();
   });
 
   it('leaves actorId and caseRef undefined when their headers are absent', () => {

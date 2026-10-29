@@ -6,6 +6,7 @@ export const ACTOR_ID_HEADER = 'X-Actor-Id';
 export const CASE_REF_HEADER = 'X-Case-Ref';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
+const TRACE_VALUE_PATTERN = /^[A-Za-z0-9._:@/-]{1,128}$/;
 
 export interface TraceContext {
   requestId: string;
@@ -45,9 +46,14 @@ export function resolveRequestId(request: Request): string {
 export function resolveTrace(request: Request): TraceContext {
   return {
     requestId: resolveRequestId(request),
-    actorId: firstHeader(request, 'x-actor-id'),
-    caseRef: firstHeader(request, 'x-case-ref'),
+    actorId: firstTraceValue(request, 'x-actor-id'),
+    caseRef: firstTraceValue(request, 'x-case-ref'),
   };
+}
+
+function firstTraceValue(request: Request, name: string): string | undefined {
+  const raw = firstHeader(request, name);
+  return raw && TRACE_VALUE_PATTERN.test(raw) ? raw : undefined;
 }
 
 function firstHeader(request: Request, name: string): string | undefined {

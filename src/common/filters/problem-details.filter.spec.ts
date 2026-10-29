@@ -53,7 +53,7 @@ describe('ProblemDetailsFilter', () => {
     expect(response.contentType).toHaveBeenCalledWith('application/problem+json');
     expect(response.send).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: 'https://protocolo-nacional.dev/problems/not-found',
+        type: 'about:blank',
         title: 'Not Found',
         status: 404,
         detail: 'route not found',
@@ -118,7 +118,7 @@ describe('ProblemDetailsFilter', () => {
     expect(response.status).toHaveBeenCalledWith(403);
     const body = response.send.mock.calls[0][0];
     expect(body).toMatchObject({
-      type: 'https://protocolo-nacional.dev/problems/forbidden',
+      type: 'about:blank',
       title: 'Forbidden',
       status: 403,
       detail: 'you shall not pass',
@@ -150,7 +150,7 @@ describe('ProblemDetailsFilter', () => {
     expect(response.status).toHaveBeenCalledWith(413);
     const body = response.send.mock.calls[0][0];
     expect(body).toMatchObject({
-      type: 'https://protocolo-nacional.dev/problems/payload-too-large',
+      type: 'about:blank',
       title: 'Payload Too Large',
       status: 413,
       detail: 'request entity too large',

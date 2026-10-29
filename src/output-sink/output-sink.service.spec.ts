@@ -73,9 +73,9 @@ describe('OutputSinkService', () => {
     });
     const batch = buildBatch();
 
-    await service.deliver(batch, 'peer-1', 'plate');
+    await service.deliver(batch, 'peer-1', 'plate', 'req-7');
 
-    expect(callbackDriver.deliver).toHaveBeenCalledWith(batch, 'peer-1', 'plate');
+    expect(callbackDriver.deliver).toHaveBeenCalledWith(batch, 'peer-1', 'plate', 'req-7');
     expect(queueDriver.deliver).not.toHaveBeenCalled();
     expect(dbDriver.deliver).not.toHaveBeenCalled();
   });
