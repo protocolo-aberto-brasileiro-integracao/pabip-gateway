@@ -28,7 +28,7 @@ describe('AppModule (e2e)', () => {
     expect(response.status).toBe(404);
     expect(response.headers['content-type']).toContain('application/problem+json');
     expect(response.body).toMatchObject({
-      type: 'https://protocolo-nacional.dev/problems/not-found',
+      type: 'about:blank',
       title: 'Not Found',
       status: 404,
       instance: '/does-not-exist',
